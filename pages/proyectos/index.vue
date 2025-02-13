@@ -1,4 +1,3 @@
-
 <template>
     <div class="contenedor">
         <h1>Proyectos</h1>
@@ -19,34 +18,43 @@
 
                 <div class="campo">
                     <label for="nombre">Nombre*</label>
-                    <input id="nombre" v-model="nuevoProyecto.nombre" type="text" required placeholder="Nombre del proyecto" />
+                    <input id="nombre" v-model="nuevoProyecto.nombre" type="text" required
+                        placeholder="Nombre del proyecto" />
                 </div>
 
                 <div class="campo">
                     <label for="cliente">Cliente</label>
+                    <input type="text" v-model="busquedaCliente" placeholder="Buscar cliente..." />
                     <select id="cliente" v-model="nuevoProyecto.cliente">
                         <option :value="null">Seleccione un cliente</option>
-                        <option v-for="user in users" :key="user._id" :value="{ _id: user._id, nombre: user.user?.data?.legalName || user.data.legalName, img: user.user?.imgUrl || user.imgUrl }">
+                        <option v-for="user in clientesFiltrados" :key="user._id"
+                            :value="{ _id: user._id, nombre: user.user?.data?.legalName || user.data.legalName, img: user.user?.imgUrl || user.imgUrl }">
                             {{ user.user?.data?.legalName || user.data.legalName }}
                         </option>
                     </select>
                 </div>
 
+                <!-- Campo de búsqueda y select para Ejecutivo -->
                 <div class="campo">
                     <label for="ejecutivo">Ejecutivo*</label>
+                    <input type="text" v-model="busquedaEjecutivo" placeholder="Buscar ejecutivo..." />
                     <select id="ejecutivo" v-model="nuevoProyecto.ejecutivo" required>
                         <option :value="null">Seleccione un ejecutivo</option>
-                        <option v-for="user in users" :key="user._id" :value="{ _id: user._id, nombre: user.user?.data?.legalName || user.data.legalName, img: user.user?.imgUrl || user.imgUrl }">
+                        <option v-for="user in ejecutivosFiltrados" :key="user._id"
+                            :value="{ _id: user._id, nombre: user.user?.data?.legalName || user.data.legalName, img: user.user?.imgUrl || user.imgUrl }">
                             {{ user.user?.data?.legalName || user.data.legalName }}
                         </option>
                     </select>
                 </div>
 
+                <!-- Campo de búsqueda y select para Contacto -->
                 <div class="campo">
                     <label for="contacto">Contacto</label>
+                    <input type="text" v-model="busquedaContacto" placeholder="Buscar contacto..." />
                     <select id="contacto" v-model="nuevoProyecto.contacto">
                         <option :value="null">Seleccione un contacto</option>
-                        <option v-for="user in users" :key="user._id" :value="{ _id: user._id, nombre: user.user?.data?.legalName || user.data.legalName, img: user.user?.imgUrl || user.imgUrl }">
+                        <option v-for="user in contactosFiltrados" :key="user._id"
+                            :value="{ _id: user._id, nombre: user.user?.data?.legalName || user.data.legalName, img: user.user?.imgUrl || user.imgUrl }">
                             {{ user.user?.data?.legalName || user.data.legalName }}
                         </option>
                     </select>
@@ -62,7 +70,8 @@
                 </div>
 
                 <div class="botones">
-                    <button type="submit" class="btn-crear">{{ editando ? 'Actualizar Proyecto' : 'Crear Proyecto' }}</button>
+                    <button type="submit" class="btn-crear">{{ editando ? 'Actualizar Proyecto' : 'Crear Proyecto'
+                        }}</button>
 
                     <button type="button" @click="limpiarFormulario" class="btn-limpiar">Limpiar</button>
                 </div>
@@ -85,21 +94,24 @@
                     <td>{{ proyecto.nombre }}</td>
                     <td>
                         <div class="nombre-con-imagen" v-if="proyecto.cliente">
-                            <img v-if="proyecto.cliente.img" :src="proyecto.cliente.img" alt="Imagen Cliente" class="imagen-pequena" />
+                            <img v-if="proyecto.cliente.img" :src="proyecto.cliente.img" alt="Imagen Cliente"
+                                class="imagen-pequena" />
                             <span>{{ proyecto.cliente.nombre }}</span>
                         </div>
                         <span v-else>-</span>
                     </td>
                     <td>
                         <div class="nombre-con-imagen" v-if="proyecto.ejecutivo">
-                            <img v-if="proyecto.ejecutivo.img" :src="proyecto.ejecutivo.img" alt="Imagen Ejecutivo" class="imagen-pequena" />
+                            <img v-if="proyecto.ejecutivo.img" :src="proyecto.ejecutivo.img" alt="Imagen Ejecutivo"
+                                class="imagen-pequena" />
                             <span>{{ proyecto.ejecutivo.nombre }}</span>
                         </div>
                         <span v-else>-</span>
                     </td>
                     <td>
                         <div class="nombre-con-imagen" v-if="proyecto.contacto">
-                            <img v-if="proyecto.contacto.img" :src="proyecto.contacto.img" alt="Imagen Contacto" class="imagen-pequena" />
+                            <img v-if="proyecto.contacto.img" :src="proyecto.contacto.img" alt="Imagen Contacto"
+                                class="imagen-pequena" />
                             <span>{{ proyecto.contacto.nombre }}</span>
                         </div>
                         <span v-else>-</span>
@@ -107,16 +119,16 @@
                     <td>{{ proyecto.tipoProyecto }}</td>
                     <td>
                         <button @click="editarProyecto(proyecto.nombre)" class="btn-editar">Editar</button>
-                        <button @click="mostrarModalConfirmacion(proyecto.nombre)" class="btn-eliminar">Eliminar</button>
+                        <button @click="mostrarModalConfirmacion(proyecto.nombre)"
+                            class="btn-eliminar">Eliminar</button>
                     </td>
                 </tr>
             </tbody>
         </table>
     </div>
 </template>
-
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useProyectoStore } from '~/store/proyectoStore'
 import { storeToRefs } from 'pinia'
 import type { Proyecto, User } from '~/types'
@@ -129,6 +141,30 @@ const { data: usersData } = await useFetch<User[]>('https://apidev.unabase.cc/ap
 const users = usersData.value || []
 const editando = ref(false)
 const proyectoOriginal = ref<string | null>(null)
+
+// Variables para almacenar las búsquedas
+const busquedaCliente = ref('')
+const busquedaEjecutivo = ref('')
+const busquedaContacto = ref('')
+
+// Filtros para cada campo
+const clientesFiltrados = computed(() => {
+    return users.filter(user => 
+        (user.user?.data?.legalName || user.data.legalName).toLowerCase().includes(busquedaCliente.value.toLowerCase())
+    )
+})
+
+const ejecutivosFiltrados = computed(() => {
+    return users.filter(user => 
+        (user.user?.data?.legalName || user.data.legalName).toLowerCase().includes(busquedaEjecutivo.value.toLowerCase())
+    )
+})
+
+const contactosFiltrados = computed(() => {
+    return users.filter(user => 
+        (user.user?.data?.legalName || user.data.legalName).toLowerCase().includes(busquedaContacto.value.toLowerCase())
+    )
+})
 
 const nuevoProyecto = ref<Proyecto>({
     nombre: '',
@@ -172,6 +208,7 @@ const crearNuevoProyecto = () => {
     }
     limpiarFormulario()
 }
+
 const limpiarFormulario = () => {
     nuevoProyecto.value = {
         nombre: '',
@@ -180,6 +217,9 @@ const limpiarFormulario = () => {
         contacto: undefined,
         tipoProyecto: '' as 'Cotización' | 'Negocio'
     }
+    busquedaCliente.value = ''
+    busquedaEjecutivo.value = ''
+    busquedaContacto.value = ''
     editando.value = false
     proyectoOriginal.value = null
 }
@@ -192,9 +232,7 @@ const editarProyecto = (nombre: string) => {
         editando.value = true
     }
 }
-
 </script>
-
 <style scoped>
 .contenedor {
     font-family: Arial, sans-serif;
