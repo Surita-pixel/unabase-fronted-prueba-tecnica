@@ -71,7 +71,7 @@
 
                 <div class="botones">
                     <button type="submit" class="btn-crear">{{ editando ? 'Actualizar Proyecto' : 'Crear Proyecto'
-                        }}</button>
+                    }}</button>
 
                     <button type="button" @click="limpiarFormulario" class="btn-limpiar">Limpiar</button>
                 </div>
@@ -127,44 +127,61 @@
         </table>
     </div>
 </template>
+
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useProyectoStore } from '~/store/proyectoStore'
 import { storeToRefs } from 'pinia'
 import type { Proyecto, User } from '~/types'
 
 const proyectoStore = useProyectoStore()
 const { proyectos } = storeToRefs(proyectoStore)
-
-const { data: usersData } = await useFetch<User[]>('https://apidev.unabase.cc/app/users/findUsers/ByNames?name=miguel')
-
-const users = usersData.value || []
 const editando = ref(false)
 const proyectoOriginal = ref<string | null>(null)
 
-// Variables para almacenar las búsquedas
 const busquedaCliente = ref('')
 const busquedaEjecutivo = ref('')
 const busquedaContacto = ref('')
 
-// Filtros para cada campo
-const clientesFiltrados = computed(() => {
-    return users.filter(user => 
-        (user.user?.data?.legalName || user.data.legalName).toLowerCase().includes(busquedaCliente.value.toLowerCase())
-    )
-})
+const clientesResultados = ref<User[]>([])
+const ejecutivosResultados = ref<User[]>([])
+const contactosResultados = ref<User[]>([])
+    const buscarClientes = async () => {
+    try {
+        const data = await $fetch<User[]>(`https://apidev.unabase.cc/app/users/findUsers/ByNames?name=${busquedaCliente.value || ''}`)
+        clientesResultados.value = data || []
+    } catch (error) {
+        console.error('Error buscando clientes:', error)
+        clientesResultados.value = []
+    }
+}
 
-const ejecutivosFiltrados = computed(() => {
-    return users.filter(user => 
-        (user.user?.data?.legalName || user.data.legalName).toLowerCase().includes(busquedaEjecutivo.value.toLowerCase())
-    )
-})
+const buscarEjecutivos = async () => {
+    try {
+        const data = await $fetch<User[]>(`https://apidev.unabase.cc/app/users/findUsers/ByNames?name=${busquedaEjecutivo.value || ''}`)
+        ejecutivosResultados.value = data || []
+    } catch (error) {
+        console.error('Error buscando ejecutivos:', error)
+        ejecutivosResultados.value = []
+    }
+}
 
-const contactosFiltrados = computed(() => {
-    return users.filter(user => 
-        (user.user?.data?.legalName || user.data.legalName).toLowerCase().includes(busquedaContacto.value.toLowerCase())
-    )
-})
+const buscarContactos = async () => {
+    try {
+        const data = await $fetch<User[]>(`https://apidev.unabase.cc/app/users/findUsers/ByNames?name=${busquedaContacto.value || ''}`)
+        contactosResultados.value = data || []
+    } catch (error) {
+        console.error('Error buscando contactos:', error)
+        contactosResultados.value = []
+    }
+}
+watch(busquedaCliente, () => buscarClientes())
+watch(busquedaEjecutivo, () => buscarEjecutivos())
+watch(busquedaContacto, () => buscarContactos())
+
+const clientesFiltrados = computed(() => clientesResultados.value)
+const ejecutivosFiltrados = computed(() => ejecutivosResultados.value)
+const contactosFiltrados = computed(() => contactosResultados.value)
 
 const nuevoProyecto = ref<Proyecto>({
     nombre: '',
@@ -196,10 +213,12 @@ const cancelarEliminacion = () => {
 }
 
 const crearNuevoProyecto = () => {
+    nuevoProyecto.value.nombre = nuevoProyecto.value.nombre.trim().toLowerCase()
+
     if (editando.value && proyectoOriginal.value) {
         proyectoStore.editarProyecto(proyectoOriginal.value, { ...nuevoProyecto.value })
     } else {
-        const nombreExistente = proyectos.value.some((proyecto) => proyecto.nombre === nuevoProyecto.value.nombre)
+        const nombreExistente = proyectos.value.some((proyecto) => proyecto.nombre.trim().toLowerCase() === nuevoProyecto.value.nombre)
         if (nombreExistente) {
             alert('El nombre del proyecto ya existe. Por favor, elige otro nombre.')
             return
@@ -208,6 +227,7 @@ const crearNuevoProyecto = () => {
     }
     limpiarFormulario()
 }
+
 
 const limpiarFormulario = () => {
     nuevoProyecto.value = {
